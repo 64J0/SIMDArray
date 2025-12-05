@@ -1425,11 +1425,7 @@ let inline minBy
 
 
 /// <summary>
-/// Returns the minimum value in the array using SIMD operations.
-/// Keep in mind that this function is processor dependent and might give different results
-/// on different hardware due different optimizations.
-/// Check this issue for more details:
-/// - https://github.com/dotnet/fsharp/issues/19135
+/// Exactly like the standard Min function, only faster
 /// </summary>
 /// <param name="array"></param>
 let inline min (array :^T[]) : ^T =
@@ -1447,7 +1443,15 @@ let inline min (array :^T[]) : ^T =
     if len >= count then
         while i <= len-count do
             let v = Vector< ^T>(array,i)
+#if NET9_0_OR_GREATER
+            // There was a breaking change on how Vector.Min works on .NET 9+.
+            // Using Vector.MinNumber to match previous behavior (which might not be the fastest option).
+            // Check this issue for more context:
+            // - https://github.com/dotnet/fsharp/issues/19135
+            minV <- Vector.MinNumber (v, minV)
+#else
             minV <- Vector.Min (v, minV)
+#endif
             i <- i + count
 
         for j=0 to count-1 do
