@@ -1425,7 +1425,11 @@ let inline minBy
 
 
 /// <summary>
-/// Exactly like the standard Min function, only faster
+/// Returns the minimum value in the array using SIMD operations.
+/// Keep in mind that this function is processor dependent and might give different results
+/// on different hardware due different optimizations.
+/// Check this issue for more details:
+/// - https://github.com/dotnet/fsharp/issues/19135
 /// </summary>
 /// <param name="array"></param>
 let inline min (array :^T[]) : ^T =
