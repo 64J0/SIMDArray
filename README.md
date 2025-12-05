@@ -1,7 +1,8 @@
-[![Build & test for dotnet 3.1, 5.0, 6.0](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml/badge.svg)](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml)
+[![Build & test for dotnet 3.1, 5.0, 6.0, 8.0, 10.0](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml/badge.svg)](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml)
 
 # SIMDArray FSharp
-SIMD and other Performance enhanced Array operations for F#
+
+SIMD and other Performance enhanced Array operations for F#.
 
 ## Example Usage
 
@@ -66,13 +67,13 @@ let result = Parallel.ForStrideAggreagate 0 array.Length (Vector< ^T>.Count) Vec
 
 ## Notes
 
-Only 64 bit builds are supported.  Mono should work with 5.0+, but I have not yet tested it. Performance improvements will vary depending on your CPU architecture, width of Vector type, and the operations you apply.  For small arrays the core libs may be faster due SIMD overhead.
+Only 64 bit builds are supported. Mono should work with 5.0+, but I have not yet tested it. Performance improvements will vary depending on your CPU architecture, width of Vector type, and the operations you apply. For small arrays the core libs may be faster due SIMD overhead.
 When measuring performance be sure to use Release builds with optimizations turned on.
 
-Floating point addition is not associative, so results with SIMD operations will not be identical, though often
-they will be more accurate, such as in the case of sum, or average.
+Floating point addition is not associative, so results with SIMD operations will not be identical, though often they will be more accurate, such as in the case of sum, or average.
 
 ## Upd: .NET 7.0 Basic Tests
+
 ```
 // * Summary *
 
@@ -236,6 +237,7 @@ Jit=RyuJit  GarbageCollection=Concurrent Workstation
 |        MathNETSum | 1000000 | 967,761.7422 ns | 17,557.1206 ns |     - |     - |  2.00 |          29,450.93 |
 
 ### With 32bit Floats vs MathNET.Numerics MKL Native. Adding two arrays <a name="mathnetnative"></a>
+
 |     Method |  Length |            Median |          StdDev | Gen 0 | Gen 1 |    Gen 2 | Bytes Allocated/Op |
 |----------- |-------- |------------------ |---------------- |------ |------ |--------- |------------------- |
 |   **SIMDMap2** |     **100** |        **92.1515 ns** |       **3.0304 ns** |  **2.70** |     **-** |        **-** |             **212.76** |
