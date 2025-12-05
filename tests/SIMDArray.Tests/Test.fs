@@ -605,16 +605,19 @@ let ``SIMD.minBy = Array.minBy`` () =
         (array.Length > 0 && array <> [||]) ==>
         lazy ((compareNums (Array.SIMD.minBy (fun x -> x+x) (fun x -> x+x) array) (Array.minBy (fun x -> x+x) array)))
 
+[<Test>]                  
+let ``SIMD.minBy id = Array.minBy id`` () =
+    quickCheck <|
+    fun (array: int []) ->
+        (array.Length > 0 && array <> [||]) ==>
+        lazy ((compareNums (Array.SIMD.minBy (id) (id) array) (Array.minBy (id) array)))
 
-// The SIMD.min implementation is processor dependent and may not match Array.min exactly in all cases.
-// Check this issue for more details:
-// - https://github.com/dotnet/fsharp/issues/19135
-// [<Test>]                  
-// let ``SIMD.min = Array.min`` () =
-//     quickCheck <|
-//     fun (array: float []) ->
-//         (array.Length > 0 && array <> [||]) ==>
-//         lazy (compareNums (Array.SIMD.min array) (Array.min array))
+[<Test>]                  
+let ``SIMD.min = Array.min`` () =
+    quickCheck <|
+    fun (array: float []) ->
+        (array.Length > 0 && array <> [||]) ==>
+        lazy (compareNums (Array.SIMD.min array) (Array.min array))
     
 [<Test>]                  
 let ``SIMD.dot = multiply and sum`` () =
