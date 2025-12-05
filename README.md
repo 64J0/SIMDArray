@@ -1,8 +1,23 @@
-[![Build & test for dotnet 3.1, 5.0, 6.0, 8.0, 10.0](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml/badge.svg)](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml)
+[![Build & test for dotnet 8.0, 9.0, 10.0](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml/badge.svg)](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml)
 
 # SIMDArray FSharp
 
 SIMD and other Performance enhanced Array operations for F#.
+
+## What is SIMD?
+
+**SIMD** (Single Instruction, Multiple Data) is a parallel computing technique that enables a single CPU instruction to operate on multiple data points simultaneously. Instead of processing array elements one at a time, SIMD can process multiple elements in parallel using special vector registers in modern CPUs.
+
+### SIMD in .NET
+
+.NET provides SIMD support through the `System.Numerics.Vector<T>` types and the `System.Runtime.Intrinsics` namespace. This library leverages these capabilities to deliver significant performance improvements for array operations in F#:
+
+- **Hardware Acceleration**: Utilizes CPU vector instructions (SSE, AVX, AVX2, AVX-512 on x86/x64, NEON on ARM)
+- **Automatic Vectorization**: The .NET JIT compiler optimizes `Vector<T>` operations to native SIMD instructions
+- **Type Safety**: Maintains F#'s strong type system while delivering near-native performance
+- **Cross-Platform**: Works across different CPU architectures with .NET handling the platform-specific details
+
+Performance gains vary by operation and hardware, but operations like sum, map, and max can see **3-10x speedups** on typical workloads, with even greater improvements on modern CPUs with wider vector registers.
 
 ## Example Usage
 
@@ -59,8 +74,8 @@ Parallel.ForStride 0 array.Length (Vector< ^T>.Count)
 // ForStrideAggreagate (fromInclusive : int) (toExclusive :int) (stride : int) (acc: ^T) (f : int -> ^T -> ^T) combiner
 // You can sum or otherwise aggregate the elements of an array a Vector at a time, starting from an initial acc
 let result = Parallel.ForStrideAggreagate 0 array.Length (Vector< ^T>.Count) Vector< ^T>(0)
-					(fun i acc -> acc + (Vector< ^T>(array,i)))  
-					(fun x acc -> x + acc)  //combines the results from each task into a final Vector that is returned
+     (fun i acc -> acc + (Vector< ^T>(array,i)))  
+     (fun x acc -> x + acc)  //combines the results from each task into a final Vector that is returned
 
 
 ```
@@ -71,6 +86,69 @@ Only 64 bit builds are supported. Mono should work with 5.0+, but I have not yet
 When measuring performance be sure to use Release builds with optimizations turned on.
 
 Floating point addition is not associative, so results with SIMD operations will not be identical, though often they will be more accurate, such as in the case of sum, or average.
+
+## Upd: .NET 10.0 Basic Tests
+
+```
+BenchmarkDotNet v0.15.8, Linux Ubuntu 24.04.3 LTS (Noble Numbat)
+13th Gen Intel Core i7-13620H 0.40GHz, 1 CPU, 16 logical and 10 physical cores
+.NET SDK 10.0.100
+  [Host]     : .NET 10.0.0 (10.0.0, 10.0.25.52411), X64 RyuJIT x86-64-v3 DEBUG
+  DefaultJob : .NET 10.0.0 (10.0.0, 10.0.25.52411), X64 RyuJIT x86-64-v3
+
+
+| Method               | Length  | Mean             | Error          | StdDev         | Median           | Gen0     | Gen1     | Gen2     | Allocated |
+|--------------------- |-------- |-----------------:|---------------:|---------------:|-----------------:|---------:|---------:|---------:|----------:|
+| ForSum               | 100     |        55.218 ns |      0.4325 ns |      0.4045 ns |        55.135 ns |   0.0337 |        - |        - |     424 B |
+| ForSumSIMD           | 100     |        24.665 ns |      0.2526 ns |      0.2239 ns |        24.719 ns |   0.0338 |        - |        - |     424 B |
+| Dot                  | 100     |        42.197 ns |      0.0588 ns |      0.0521 ns |        42.207 ns |        - |        - |        - |         - |
+| DotSIMD              | 100     |        18.777 ns |      0.0180 ns |      0.0160 ns |        18.770 ns |        - |        - |        - |         - |
+| Max                  | 100     |        39.115 ns |      0.0436 ns |      0.0340 ns |        39.108 ns |        - |        - |        - |         - |
+| MaxSIMD              | 100     |        12.870 ns |      0.2954 ns |      0.7356 ns |        12.436 ns |        - |        - |        - |         - |
+| MaxBy                | 100     |        40.716 ns |      0.0838 ns |      0.0784 ns |        40.681 ns |        - |        - |        - |         - |
+| MaxBySIMD            | 100     |        16.300 ns |      0.0097 ns |      0.0081 ns |        16.297 ns |        - |        - |        - |         - |
+| Map                  | 100     |        55.084 ns |      0.1901 ns |      0.1778 ns |        55.127 ns |   0.0337 |        - |        - |     424 B |
+| MapSIMD              | 100     |        28.720 ns |      0.2699 ns |      0.2107 ns |        28.774 ns |   0.0337 |        - |        - |     424 B |
+| Fold                 | 100     |        37.728 ns |      0.0986 ns |      0.0874 ns |        37.712 ns |        - |        - |        - |         - |
+| FoldSIMD             | 100     |         8.559 ns |      0.0041 ns |      0.0034 ns |         8.558 ns |        - |        - |        - |         - |
+| Partition            | 100     |       158.372 ns |      0.3039 ns |      0.2842 ns |       158.395 ns |   0.0739 |        - |        - |     928 B |
+| PartitionPerformance | 100     |       132.506 ns |      0.2302 ns |      0.2041 ns |       132.426 ns |   0.0720 |        - |        - |     904 B |
+| Filter               | 100     |       109.080 ns |      0.5235 ns |      0.4897 ns |       109.172 ns |   0.0229 |        - |        - |     288 B |
+| FilterPerformance    | 100     |       120.806 ns |      0.6028 ns |      0.5639 ns |       120.756 ns |   0.0196 |        - |        - |     248 B |
+| ForSum               | 1000    |       417.291 ns |      1.4575 ns |      1.3634 ns |       417.493 ns |   0.3204 |        - |        - |    4024 B |
+| ForSumSIMD           | 1000    |       225.820 ns |      1.8216 ns |      1.7039 ns |       225.893 ns |   0.3207 |        - |        - |    4024 B |
+| Dot                  | 1000    |       388.252 ns |      0.6464 ns |      0.6047 ns |       388.261 ns |        - |        - |        - |         - |
+| DotSIMD              | 1000    |       177.408 ns |      0.4173 ns |      0.3904 ns |       177.335 ns |        - |        - |        - |         - |
+| Max                  | 1000    |       296.551 ns |      0.6645 ns |      0.5890 ns |       296.549 ns |        - |        - |        - |         - |
+| MaxSIMD              | 1000    |        73.568 ns |      1.1301 ns |      1.0571 ns |        73.716 ns |        - |        - |        - |         - |
+| MaxBy                | 1000    |       305.456 ns |      0.1080 ns |      0.0957 ns |       305.455 ns |        - |        - |        - |         - |
+| MaxBySIMD            | 1000    |       164.616 ns |      0.0706 ns |      0.0626 ns |       164.621 ns |        - |        - |        - |         - |
+| Map                  | 1000    |       418.854 ns |      1.0645 ns |      0.8311 ns |       419.089 ns |   0.3204 |        - |        - |    4024 B |
+| MapSIMD              | 1000    |       226.076 ns |      0.1930 ns |      0.1612 ns |       226.112 ns |   0.3207 |        - |        - |    4024 B |
+| Fold                 | 1000    |       277.362 ns |      0.2585 ns |      0.2292 ns |       277.297 ns |        - |        - |        - |         - |
+| FoldSIMD             | 1000    |        76.312 ns |      0.0865 ns |      0.0809 ns |        76.311 ns |        - |        - |        - |         - |
+| Partition            | 1000    |     1,352.816 ns |      4.0662 ns |      3.3955 ns |     1,352.377 ns |   0.6466 |   0.0095 |        - |    8128 B |
+| PartitionPerformance | 1000    |       986.639 ns |      3.8694 ns |      3.6194 ns |       987.101 ns |   0.6447 |   0.0076 |        - |    8104 B |
+| Filter               | 1000    |     1,237.887 ns |      4.8888 ns |      4.5730 ns |     1,238.552 ns |   0.1698 |        - |        - |    2144 B |
+| FilterPerformance    | 1000    |     1,348.838 ns |      9.6961 ns |      9.0698 ns |     1,346.856 ns |   0.1583 |        - |        - |    1992 B |
+| ForSum               | 1000000 |   575,759.853 ns |  4,767.0490 ns |  4,225.8648 ns |   576,263.554 ns | 331.0547 | 331.0547 | 331.0547 | 4000127 B |
+| ForSumSIMD           | 1000000 |   492,243.143 ns |  2,868.8260 ns |  2,395.5996 ns |   492,029.678 ns | 331.0547 | 331.0547 | 331.0547 | 4000127 B |
+| Dot                  | 1000000 |   357,125.560 ns |    438.4611 ns |    342.3216 ns |   357,066.774 ns |        - |        - |        - |         - |
+| DotSIMD              | 1000000 |   179,871.636 ns |  3,054.5097 ns |  2,999.9370 ns |   178,798.161 ns |        - |        - |        - |         - |
+| Max                  | 1000000 |   265,039.584 ns |    897.1767 ns |    749.1832 ns |   264,738.338 ns |        - |        - |        - |         - |
+| MaxSIMD              | 1000000 |    83,582.635 ns |    141.4201 ns |    132.2844 ns |    83,558.905 ns |        - |        - |        - |         - |
+| MaxBy                | 1000000 |   264,733.298 ns |    165.0356 ns |    137.8122 ns |   264,687.821 ns |        - |        - |        - |         - |
+| MaxBySIMD            | 1000000 |   158,905.648 ns |    203.2418 ns |    169.7161 ns |   158,871.929 ns |        - |        - |        - |         - |
+| Map                  | 1000000 |   587,486.685 ns |  6,458.2355 ns |  5,725.0575 ns |   586,765.571 ns | 331.0547 | 331.0547 | 331.0547 | 4000127 B |
+| MapSIMD              | 1000000 |   481,719.223 ns |  6,154.0184 ns |  5,756.4726 ns |   480,890.493 ns | 332.5195 | 332.5195 | 332.5195 | 4000128 B |
+| Fold                 | 1000000 |   267,754.966 ns |    211.2845 ns |    187.2982 ns |   267,674.436 ns |        - |        - |        - |         - |
+| FoldSIMD             | 1000000 |    83,945.973 ns |  1,570.8942 ns |  1,680.8392 ns |    83,569.013 ns |        - |        - |        - |         - |
+| Partition            | 1000000 | 6,613,471.069 ns | 16,417.2626 ns | 14,553.4757 ns | 6,612,397.164 ns | 484.3750 | 484.3750 | 484.3750 | 8000287 B |
+| PartitionPerformance | 1000000 | 5,629,355.086 ns | 38,357.9523 ns | 35,880.0524 ns | 5,637,084.672 ns | 484.3750 | 484.3750 | 484.3750 | 8000263 B |
+| Filter               | 1000000 | 7,764,157.505 ns |  6,646.8886 ns |  6,217.5037 ns | 7,764,193.938 ns | 203.1250 | 203.1250 | 203.1250 | 2128591 B |
+| FilterPerformance    | 1000000 | 8,239,564.309 ns |  7,959.8249 ns |  6,646.8143 ns | 8,236,953.641 ns | 156.2500 | 156.2500 | 156.2500 | 2003553 B |
+
+```
 
 ## Upd: .NET 7.0 Basic Tests
 
@@ -116,11 +194,11 @@ AMD Ryzen 7 3800X, 1 CPU, 16 logical and 8 physical cores
 
 ## Performance Comparison vs Standard Array Functions
 
-* [VS Core Lib Parallel](#parallel)
-* [VS Core Lib 32bit Floats](#core32)
-* [VS Core Lib 64bit Floats](#core64)
-* [VS MathNET.Numerics 32bit Floats](#mathnet)
-* [VS MathNET.Numerics MKL Native 32bit Floats](#mathnetnative)
+- [VS Core Lib Parallel](#parallel)
+- [VS Core Lib 32bit Floats](#core32)
+- [VS Core Lib 64bit Floats](#core64)
+- [VS MathNET.Numerics 32bit Floats](#mathnet)
+- [VS MathNET.Numerics MKL Native 32bit Floats](#mathnetnative)
 
 ```ini
 
@@ -140,13 +218,11 @@ Jit=RyuJit  GarbageCollection=Concurrent Workstation
 
 ### Sum 1 million 32bit ints, ParallelSIMD vs SIMD vs Core Lib <a name="parallel"></a>
 
-|		  Method |  Length |      Median |     StdDev | Scaled | Gen 0 | Gen 1 | Gen 2 | Bytes Allocated/Op |
+|    Method |  Length |      Median |     StdDev | Scaled | Gen 0 | Gen 1 | Gen 2 | Bytes Allocated/Op |
 |---------------- |-------- |------------ |----------- |------- |------ |------ |------ |------------------- |
 |             sum | 1000000 | 979.9477 us | 15.4036 us |   1.00 |     - |     - |  1.00 |          14,967.09 |
 |         SIMDsum | 1000000 | 163.5663 us |  2.7872 us |   0.17 |     - |     - |  0.17 |           1,960.97 |
 | SIMDParallelsum | 1000000 |  82.3069 us |  6.4637 us |   0.08 |  3.74 |     - |  0.04 |           1,674.94 |
-
-
 
 ### With 32bit Floats Vs Core Lib. Map function `(fun x -> x*x)`<a name="core32"></a>
 
@@ -213,7 +289,6 @@ Jit=RyuJit  GarbageCollection=Concurrent Workstation
 |          Max | 1000000 |   771,554.3061 ns |  7,083.0659 ns |     - |     - |   0.12 |          15,008.20 |
 |      SIMDMap | 1000000 | 3,625,255.0307 ns | 40,939.9131 ns |     - |     - | 439.00 |       3,763,516.65 |
 |          Map | 1000000 | 3,490,854.2334 ns | 51,255.2300 ns |     - |     - | 413.00 |       3,589,365.95 |
-
 
 ### With 32bit Floats vs MathNET.Numerics managed. Map function `(fun x -> x*x+x)` <a name="mathnet"></a>
 
