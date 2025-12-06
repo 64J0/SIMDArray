@@ -30,7 +30,6 @@ let empty = [||]
 
 let inline indexNotFound () = raise (Exception())
 
-
 let partition f (array: _[]) =
     checkNonNull "array" array
     let res = Array.zeroCreateUnchecked array.Length
@@ -56,20 +55,14 @@ let partition f (array: _[]) =
 
     res1, res2
 
-
-
+[<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)>]
+[<CategoriesColumn>]
 [<MemoryDiagnoser>]
 type CoreBenchmark() =
-
-    let mutable list = []
-    let mutable array = [||]
-    let mutable array2 = [||]
-    let mutable array3 = [||]
-    let mutable resizeArray = ResizeArray<int>()
-
-
-    //let mutable mathnetVector = vector [1.0f]
-    //let mutable mathnetVector2 = vector [1.0f]
+    let mutable arrayInt = [||]
+    let mutable arrayInt2 = [||]
+    let mutable arrayFloat = [||]
+    let mutable arrayFloat2 = [||]
 
     [<Params(100, 1000, 1000000)>]
     member val public Length = 0 with get, set
@@ -78,115 +71,146 @@ type CoreBenchmark() =
 
     [<GlobalSetup>]
     member self.SetupData() =
-
         let r = Random(self.Length)
-        //list <- List.init self.Length (fun i -> (1.0,2.0))
+        arrayInt <- Array.init self.Length (fun i -> r.Next())
+        arrayInt2 <- Array.init self.Length (fun i -> r.Next())
+        arrayFloat <- Array.init self.Length (fun i -> r.NextDouble())
+        arrayFloat2 <- Array.init self.Length (fun i -> r.NextDouble())
 
-        array <- Array.init self.Length (fun i -> r.Next())
-        //array <- Array.create self.Length 10
-        array2 <- Array.init self.Length (fun i -> r.Next())
+    [<BenchmarkCategory("MapSquare", "Int")>]
+    [<Benchmark(Baseline = true)>]
+    member self.MapSquare() = arrayInt |> Array.map (fun x -> x * x)
 
-    //       array <- Array.create self.Length
-    //       array2 <- Array.create self.Length 2
-    //       resizeArray <- ResizeArray<int>(self.Length)
-    //for i = 0 to self.Length-1 do
-    //resizeArray.Add(array.[i])
-
-    //array2 <- Array.init self.Length (fun i -> i)
-
-
-    // for comparewith, exists, exists 2
-    //array <- Array.create self.Length 10
-    //  array2 <- Array.create self.Length 10
-
-
-    //for concat
-    //array <- Array.init self.Length (fun i -> [|1;2;3;4;5;|])
-
-
+    [<BenchmarkCategory("MapSquare", "Int")>]
     [<Benchmark>]
-    member self.ForSum() = array |> Array.map (fun x -> x * x)
+    member self.MapSquareSIMD() =
+        arrayInt |> Array.SIMD.map (fun x -> x * x) (fun x -> x * x)
 
-    [<Benchmark>]
-    member self.ForSumSIMD() =
-        array |> Array.SIMD.map (fun x -> x * x) (fun x -> x * x)
+    [<BenchmarkCategory("MapSquare", "Float")>]
+    [<Benchmark(Baseline = true)>]
+    member self.MapSquareFloat() =
+        arrayFloat |> Array.map (fun x -> x * x)
 
+    [<BenchmarkCategory("MapSquare", "Float")>]
     [<Benchmark>]
+    member self.MapSquareSIMDFloat() =
+        arrayFloat |> Array.SIMD.map (fun x -> x * x) (fun x -> x * x)
+
+    [<BenchmarkCategory("Dot")>]
+    [<Benchmark(Baseline = true)>]
     member self.Dot() =
-        array |> Array.fold2 (fun a x y -> a + x * y) 0 array2
+        arrayInt |> Array.fold2 (fun a x y -> a + x * y) 0 arrayInt2
 
+    [<BenchmarkCategory("Dot")>]
     [<Benchmark>]
-    member self.DotSIMD() = array |> Array.SIMD.dot array2
+    member self.DotSIMD() = arrayInt |> Array.SIMD.dot arrayInt2
 
+    [<BenchmarkCategory("Max", "Int")>]
+    [<Benchmark(Baseline = true)>]
+    member self.Max() = arrayInt |> Array.max
+
+    [<BenchmarkCategory("Max", "Int")>]
     [<Benchmark>]
-    member self.Max() = array |> Array.max
+    member self.MaxSIMD() = arrayInt |> Array.SIMD.max
 
+    [<BenchmarkCategory("Max", "Float")>]
+    [<Benchmark(Baseline = true)>]
+    member self.MaxFloat() = arrayFloat |> Array.max
+
+    [<BenchmarkCategory("Max", "Float")>]
     [<Benchmark>]
-    member self.MaxSIMD() = array |> Array.SIMD.max
+    member self.MaxSIMDFloat() = arrayFloat |> Array.SIMD.max
 
-    [<Benchmark>]
-    member self.MaxBy() = array |> Array.maxBy (fun x -> x * x)
+    [<BenchmarkCategory("MaxBy")>]
+    [<Benchmark(Baseline = true)>]
+    member self.MaxBy() =
+        arrayInt |> Array.maxBy (fun x -> x * x)
 
+    [<BenchmarkCategory("MaxBy")>]
     [<Benchmark>]
     member self.MaxBySIMD() =
-        array |> Array.SIMD.maxBy (fun x -> x * x) (fun x -> x * x)
+        arrayInt |> Array.SIMD.maxBy (fun x -> x * x) (fun x -> x * x)
 
+    [<BenchmarkCategory("Min")>]
+    [<Benchmark(Baseline = true)>]
+    member self.Min() = arrayInt |> Array.min
+
+    [<BenchmarkCategory("Min")>]
     [<Benchmark>]
-    member self.Map() = array |> Array.map (fun x -> x + 2 * x)
+    member self.MinSIMD() = arrayInt |> Array.SIMD.min
 
+    [<BenchmarkCategory("MinBy")>]
+    [<Benchmark(Baseline = true)>]
+    member self.MinBy() =
+        arrayInt |> Array.minBy (fun x -> x - 82)
+
+    [<BenchmarkCategory("MinBy")>]
+    [<Benchmark>]
+    member self.MinBySIMD() =
+        arrayInt |> Array.SIMD.minBy (fun x -> x - Vector<int>(82)) (fun x -> x - 82)
+
+    [<BenchmarkCategory("Map", "Int")>]
+    [<Benchmark(Baseline = true)>]
+    member self.Map() =
+        arrayInt |> Array.map (fun x -> x + 2 * x)
+
+    [<BenchmarkCategory("Map", "Int")>]
     [<Benchmark>]
     member self.MapSIMD() =
-        array |> Array.SIMD.map (fun x -> x + 2 * x) (fun x -> x + 2 * x)
+        arrayInt |> Array.SIMD.map (fun x -> x + 2 * x) (fun x -> x + 2 * x)
 
+    [<BenchmarkCategory("Map", "Float")>]
+    [<Benchmark(Baseline = true)>]
+    member self.MapFloat() =
+        arrayFloat |> Array.map (fun x -> x + 2. * x)
+
+    [<BenchmarkCategory("Map", "Float")>]
     [<Benchmark>]
-    member self.Fold() =
-        (0, array) ||> Array.fold (fun acc x -> x + acc)
+    member self.MapSIMDFloat() =
+        arrayFloat |> Array.SIMD.map (fun x -> x + 2. * x) (fun x -> x + 2. * x)
 
+    [<BenchmarkCategory("Fold")>]
+    [<Benchmark(Baseline = true)>]
+    member self.Fold() =
+        (0, arrayInt) ||> Array.fold (fun acc x -> x + acc)
+
+    [<BenchmarkCategory("Fold")>]
     [<Benchmark>]
     member self.FoldSIMD() =
         let inline fn acc x = x + acc
-        (0, array) ||> Array.SIMD.fold fn fn (+)
+        (0, arrayInt) ||> Array.SIMD.fold fn fn (+)
 
-    [<Benchmark>]
+    [<BenchmarkCategory("Partition")>]
+    [<Benchmark(Baseline = true)>]
     member self.Partition() =
-        array |> Array.partition (fun x -> x > self.Half)
+        arrayInt |> Array.partition (fun x -> x > self.Half)
 
+    [<BenchmarkCategory("Partition")>]
     [<Benchmark>]
     member self.PartitionPerformance() =
-        array |> Array.Performance.partitionUnordered (fun x -> x > self.Half)
+        arrayInt |> Array.Performance.partitionUnordered (fun x -> x > self.Half)
 
-    [<Benchmark>]
+    [<BenchmarkCategory("Filter", "Int")>]
+    [<Benchmark(Baseline = true)>]
     member self.Filter() =
-        array |> Array.filter (fun x -> x % 2 = 0)
+        arrayInt |> Array.filter (fun x -> x % 2 = 0)
 
+    [<BenchmarkCategory("Filter", "Int")>]
     [<Benchmark>]
     member self.FilterPerformance() =
-        array |> Array.Performance.filterSimplePredicate (fun x -> x % 2 = 0)
+        arrayInt |> Array.Performance.filterSimplePredicate (fun x -> x % 2 = 0)
 
+    [<BenchmarkCategory("Filter", "Float")>]
+    [<Benchmark(Baseline = true)>]
+    member self.FilterFloat() =
+        arrayFloat |> Array.filter (fun x -> x % 2. = 0)
 
+    [<BenchmarkCategory("Filter", "Float")>]
+    [<Benchmark>]
+    member self.FilterPerformanceFloat() =
+        arrayFloat |> Array.Performance.filterSimplePredicate (fun x -> x % 2. = 0)
 
 [<EntryPoint>]
-let main argv =
-
-
-
-
-    (*
-    let r = Random(1)
-    let array = Array.init 100000 (fun i ->(int)( r.NextDouble()*100.0))
-
-    let result = array |> filterOldPlusPlus (fun x-> x < 10 )
-    printf "*******\n"
-    let result = array |> filterOldPlusPlus (fun x-> x < 25 )
-    printf "*******\n"
-    let result = array |> filterOldPlusPlus (fun x-> x < 50 )
-    printf "*******\n"
-    let result = array |> filterOldPlusPlus (fun x-> x < 75 )
-    printf "*******\n"
-    let result = array |> filterOldPlusPlus (fun x-> x < 90 )
-    printf "*******\n"
-    let result = array |> filterOldPlusPlus (fun x-> x < 100)
-    printf "*******\n"*)
-
+let main _argv =
     let _ = BenchmarkRunner.Run<CoreBenchmark>()
     0
