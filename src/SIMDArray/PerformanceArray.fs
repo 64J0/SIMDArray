@@ -15,20 +15,21 @@ open SIMDArrayUtils
 /// </summary>
 /// <param name="f"></param>
 /// <param name="array"></param>
-let inline partitionUnordered f (array: _[]) = 
+let inline partitionUnordered f (array: _[]) =
     checkNonNull array
-    let res = Array.zeroCreate array.Length        
+    let res = Array.zeroCreate array.Length
     let mutable upCount = 0
-    let mutable downCount = array.Length-1    
-    for x in array do                
-        if f x then 
+    let mutable downCount = array.Length - 1
+
+    for x in array do
+        if f x then
             res.[upCount] <- x
             upCount <- upCount + 1
         else
             res.[downCount] <- x
             downCount <- downCount - 1
-                            
-    Array.sub res 0 upCount , Array.sub res upCount (array.Length-upCount)
+
+    Array.sub res 0 upCount, Array.sub res upCount (array.Length - upCount)
 
 
 
@@ -37,13 +38,14 @@ let inline partitionUnordered f (array: _[]) =
 /// slightly and allocations greatly.
 /// </summary>
 /// <param name="array"></param>
-let inline distinctUnordered (array:'T[]) =
+let inline distinctUnordered (array: 'T[]) =
     checkNonNull array
-                        
+
     let hashSet = HashSet<'T>(HashIdentity.Structural<'T>)
-    for v in array do 
+
+    for v in array do
         hashSet.Add(v) |> ignore
-                    
+
     let res = Array.zeroCreate hashSet.Count
     hashSet.CopyTo(res)
     res
@@ -53,28 +55,29 @@ let inline distinctUnordered (array:'T[]) =
 /// slightly and allocations greatly.
 /// </summary>
 /// <param name="array"></param>
-let inline distinctByUnordered keyf (array:'T[]) =
+let inline distinctByUnordered keyf (array: 'T[]) =
     checkNonNull array
-        
+
     let hashSet = HashSet<_>(HashIdentity.Structural<_>)
+
     for v in array do
         hashSet.Add(keyf v) |> ignore
 
     let res = Array.zeroCreate hashSet.Count
     hashSet.CopyTo(res)
     res
-        
+
 /// <summary>
 /// Performs a map operation in place. If you don't need the old array,
 /// Save yourself time and GC pressure!
 /// </summary>
 /// <param name="f"></param>
 /// <param name="array"></param>
-let inline mapInPlace f (array :'T[]) =
-    
+let inline mapInPlace f (array: 'T[]) =
+
     checkNonNull array
-        
-    for i = 0 to array.Length-1 do
+
+    for i = 0 to array.Length - 1 do
         array.[i] <- f array.[i]
 
     ()
@@ -85,23 +88,27 @@ let inline mapInPlace f (array :'T[]) =
 /// </summary>
 /// <param name="f">Predicate to fitler with</param>
 /// <param name="array"></param>
-let inline filterSimplePredicate (f: ^T -> bool) (array: ^T[]) = 
-    
+let inline filterSimplePredicate (f: ^T -> bool) (array: ^T[]) =
+
     checkNonNull array
-    if array.Length = 0 then invalidArg "array" "Array can not be empty."    
-        
+
+    if array.Length = 0 then
+        invalidArg "array" "Array can not be empty."
+
     let mutable count = 0
 
-    for i = 0 to array.Length-1 do
+    for i = 0 to array.Length - 1 do
         if f array.[i] then
             count <- count + 1
-                    
+
     let result = Array.zeroCreate count
     let mutable j = 0
-    for i = 0 to array.Length-1 do
+
+    for i = 0 to array.Length - 1 do
         if f array.[i] then
             result.[j] <- array.[i]
             j <- j + 1
+
     result
 
 /// <summary>
@@ -110,8 +117,7 @@ let inline filterSimplePredicate (f: ^T -> bool) (array: ^T[]) =
 /// </summary>
 /// <param name="f">Predicate to fitler with</param>
 /// <param name="array"></param>
-let inline whereSimplePredicate (f: ^T -> bool) (array: ^T[]) = 
-    filterSimplePredicate f array
+let inline whereSimplePredicate (f: ^T -> bool) (array: ^T[]) = filterSimplePredicate f array
 
 
 /// <summary>
@@ -119,10 +125,10 @@ let inline whereSimplePredicate (f: ^T -> bool) (array: ^T[]) =
 /// </summary>
 /// <param name="x"></param>
 /// <param name="array"></param>
-let inline filterEqual (x : ^T) (array : ^T[]) = 
+let inline filterEqual (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e = x) array
 
-let inline whereEqual (x : ^T) (array : ^T[]) = 
+let inline whereEqual (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e = x) array
 
 
@@ -131,10 +137,10 @@ let inline whereEqual (x : ^T) (array : ^T[]) =
 /// </summary>
 /// <param name="x"></param>
 /// <param name="array"></param>
-let inline filterNotEqual (x : ^T) (array : ^T[]) = 
+let inline filterNotEqual (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e <> x) array
 
-let inline whereNotEqual (x : ^T) (array : ^T[]) = 
+let inline whereNotEqual (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e <> x) array
 
 /// <summary>
@@ -142,10 +148,10 @@ let inline whereNotEqual (x : ^T) (array : ^T[]) =
 /// </summary>
 /// <param name="x"></param>
 /// <param name="array"></param>
-let inline filterGreaterThan (x : ^T) (array : ^T[]) = 
+let inline filterGreaterThan (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e > x) array
 
-let inline whereGreaterThan (x : ^T) (array : ^T[]) = 
+let inline whereGreaterThan (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e > x) array
 
 /// <summary>
@@ -153,10 +159,10 @@ let inline whereGreaterThan (x : ^T) (array : ^T[]) =
 /// </summary>
 /// <param name="x"></param>
 /// <param name="array"></param>
-let inline filterLessThan (x : ^T) (array : ^T[]) = 
+let inline filterLessThan (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e < x) array
 
-let inline whereLessThan (x : ^T) (array : ^T[]) = 
+let inline whereLessThan (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e < x) array
 
 /// <summary>
@@ -164,10 +170,10 @@ let inline whereLessThan (x : ^T) (array : ^T[]) =
 /// </summary>
 /// <param name="x"></param>
 /// <param name="array"></param>
-let inline filterGEq (x : ^T) (array : ^T[]) = 
+let inline filterGEq (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e >= x) array
 
-let inline whereGEq (x : ^T) (array : ^T[]) = 
+let inline whereGEq (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e >= x) array
 
 /// <summary>
@@ -175,10 +181,8 @@ let inline whereGEq (x : ^T) (array : ^T[]) =
 /// </summary>
 /// <param name="x"></param>
 /// <param name="array"></param>
-let inline filterLEq (x : ^T) (array : ^T[]) = 
+let inline filterLEq (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e <= x) array
 
-let inline whereLEq (x : ^T) (array : ^T[]) = 
+let inline whereLEq (x: ^T) (array: ^T[]) =
     filterSimplePredicate (fun e -> e <= x) array
-
-

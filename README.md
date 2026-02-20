@@ -1,7 +1,23 @@
-[![Build & test for dotnet 3.1, 5.0, 6.0](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml/badge.svg)](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml)
+[![Build & test for dotnet 8.0, 9.0, 10.0](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml/badge.svg)](https://github.com/fsprojects/SIMDArray/actions/workflows/test.yml)
 
 # SIMDArray FSharp
-SIMD and other Performance enhanced Array operations for F#
+
+SIMD and other Performance enhanced Array operations for F#.
+
+## What is SIMD?
+
+**SIMD** (Single Instruction, Multiple Data) is a parallel computing technique that enables a single CPU instruction to operate on multiple data points simultaneously. Instead of processing array elements one at a time, SIMD can process multiple elements in parallel using special vector registers in modern CPUs.
+
+### SIMD in .NET
+
+.NET provides SIMD support through the `System.Numerics.Vector<T>` types and the `System.Runtime.Intrinsics` namespace. This library leverages these capabilities to deliver significant performance improvements for array operations in F#:
+
+- **Hardware Acceleration**: Utilizes CPU vector instructions (SSE, AVX, AVX2, AVX-512 on x86/x64, NEON on ARM)
+- **Automatic Vectorization**: The .NET JIT compiler optimizes `Vector<T>` operations to native SIMD instructions
+- **Type Safety**: Maintains F#'s strong type system while delivering near-native performance
+- **Cross-Platform**: Works across different CPU architectures with .NET handling the platform-specific details
+
+Performance gains vary by operation and hardware, but operations like sum, map, and max can see **3-10x speedups** on typical workloads, with even greater improvements on modern CPUs with wider vector registers.
 
 ## Example Usage
 
@@ -58,21 +74,27 @@ Parallel.ForStride 0 array.Length (Vector< ^T>.Count)
 // ForStrideAggreagate (fromInclusive : int) (toExclusive :int) (stride : int) (acc: ^T) (f : int -> ^T -> ^T) combiner
 // You can sum or otherwise aggregate the elements of an array a Vector at a time, starting from an initial acc
 let result = Parallel.ForStrideAggreagate 0 array.Length (Vector< ^T>.Count) Vector< ^T>(0)
-					(fun i acc -> acc + (Vector< ^T>(array,i)))  
-					(fun x acc -> x + acc)  //combines the results from each task into a final Vector that is returned
+     (fun i acc -> acc + (Vector< ^T>(array,i)))  
+     (fun x acc -> x + acc)  //combines the results from each task into a final Vector that is returned
 
 
 ```
 
 ## Notes
 
-Only 64 bit builds are supported.  Mono should work with 5.0+, but I have not yet tested it. Performance improvements will vary depending on your CPU architecture, width of Vector type, and the operations you apply.  For small arrays the core libs may be faster due SIMD overhead.
+Only 64 bit builds are supported. Mono should work with 5.0+, but I have not yet tested it. Performance improvements will vary depending on your CPU architecture, width of Vector type, and the operations you apply. For small arrays the core libs may be faster due SIMD overhead.
 When measuring performance be sure to use Release builds with optimizations turned on.
 
-Floating point addition is not associative, so results with SIMD operations will not be identical, though often
-they will be more accurate, such as in the case of sum, or average.
+Floating point addition is not associative, so results with SIMD operations will not be identical, though often they will be more accurate, such as in the case of sum, or average.
+
+## Upd: .NET 10.0 Basic Tests
+
+This report is too big to be added here.
+
+You can check the latest result at the BenchmarkDotNet.Artifacts folder: [link](./BenchmarkDotNet.Artifacts/results/Program.CoreBenchmark-report-github.md).
 
 ## Upd: .NET 7.0 Basic Tests
+
 ```
 // * Summary *
 
@@ -115,11 +137,11 @@ AMD Ryzen 7 3800X, 1 CPU, 16 logical and 8 physical cores
 
 ## Performance Comparison vs Standard Array Functions
 
-* [VS Core Lib Parallel](#parallel)
-* [VS Core Lib 32bit Floats](#core32)
-* [VS Core Lib 64bit Floats](#core64)
-* [VS MathNET.Numerics 32bit Floats](#mathnet)
-* [VS MathNET.Numerics MKL Native 32bit Floats](#mathnetnative)
+- [VS Core Lib Parallel](#parallel)
+- [VS Core Lib 32bit Floats](#core32)
+- [VS Core Lib 64bit Floats](#core64)
+- [VS MathNET.Numerics 32bit Floats](#mathnet)
+- [VS MathNET.Numerics MKL Native 32bit Floats](#mathnetnative)
 
 ```ini
 
@@ -139,13 +161,11 @@ Jit=RyuJit  GarbageCollection=Concurrent Workstation
 
 ### Sum 1 million 32bit ints, ParallelSIMD vs SIMD vs Core Lib <a name="parallel"></a>
 
-|		  Method |  Length |      Median |     StdDev | Scaled | Gen 0 | Gen 1 | Gen 2 | Bytes Allocated/Op |
+|    Method |  Length |      Median |     StdDev | Scaled | Gen 0 | Gen 1 | Gen 2 | Bytes Allocated/Op |
 |---------------- |-------- |------------ |----------- |------- |------ |------ |------ |------------------- |
 |             sum | 1000000 | 979.9477 us | 15.4036 us |   1.00 |     - |     - |  1.00 |          14,967.09 |
 |         SIMDsum | 1000000 | 163.5663 us |  2.7872 us |   0.17 |     - |     - |  0.17 |           1,960.97 |
 | SIMDParallelsum | 1000000 |  82.3069 us |  6.4637 us |   0.08 |  3.74 |     - |  0.04 |           1,674.94 |
-
-
 
 ### With 32bit Floats Vs Core Lib. Map function `(fun x -> x*x)`<a name="core32"></a>
 
@@ -213,7 +233,6 @@ Jit=RyuJit  GarbageCollection=Concurrent Workstation
 |      SIMDMap | 1000000 | 3,625,255.0307 ns | 40,939.9131 ns |     - |     - | 439.00 |       3,763,516.65 |
 |          Map | 1000000 | 3,490,854.2334 ns | 51,255.2300 ns |     - |     - | 413.00 |       3,589,365.95 |
 
-
 ### With 32bit Floats vs MathNET.Numerics managed. Map function `(fun x -> x*x+x)` <a name="mathnet"></a>
 
 |            Method |  Length |          Median |         StdDev | Gen 0 | Gen 1 | Gen 2 | Bytes Allocated/Op |
@@ -236,6 +255,7 @@ Jit=RyuJit  GarbageCollection=Concurrent Workstation
 |        MathNETSum | 1000000 | 967,761.7422 ns | 17,557.1206 ns |     - |     - |  2.00 |          29,450.93 |
 
 ### With 32bit Floats vs MathNET.Numerics MKL Native. Adding two arrays <a name="mathnetnative"></a>
+
 |     Method |  Length |            Median |          StdDev | Gen 0 | Gen 1 |    Gen 2 | Bytes Allocated/Op |
 |----------- |-------- |------------------ |---------------- |------ |------ |--------- |------------------- |
 |   **SIMDMap2** |     **100** |        **92.1515 ns** |       **3.0304 ns** |  **2.70** |     **-** |        **-** |             **212.76** |
